@@ -126,6 +126,8 @@ http://<tailscale-ip>:4002
 
 Accept the self-signed certificate warning on port 4001. Enter `DESKTOP_PASSWORD` when prompted.
 
+> **Desktop credentials:** username `abc`, password is your `DESKTOP_PASSWORD`.
+
 ---
 
 ## Stopping
@@ -185,12 +187,15 @@ reachable within the shared network namespace (desktop and webui containers).
 
 ## OSINT Tools
 
+> **Status: under development.** Installation is partially working but some tools may fail or behave unexpectedly. Do not rely on this feature for production use yet.
+
 Run `osint-setup` from a terminal inside the desktop to install a comprehensive OSINT toolkit.
 Tools are saved to `/config/bin` (persistent across container recreations).
 
 ```bash
 osint-setup --list    # preview everything that will be installed
 osint-setup           # install all tools
+osint-setup --guide   # usage reference for every tool
 ```
 
 **What gets installed:**
@@ -214,6 +219,8 @@ osint-setup           # install all tools
 ---
 
 ## Secure Communications
+
+> **Status: under development.** Installation is partially working but some tools may fail or behave unexpectedly. Do not rely on this feature for production use yet.
 
 Run `comms-setup` from a terminal inside the desktop to install a secure communications toolkit.
 
