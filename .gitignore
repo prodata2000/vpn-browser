@@ -1,0 +1,5 @@
+# VPN configs contain private keys — never commit
+wireguard/*.conf
+
+# Local environment variables (VPN key, passwords)
+.env

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /Users/prodata2000/projects/vpn-browser/start.sh /Users/prodata2000/projects/vpn-browser/stop.sh)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:hub.docker.com)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3)"
+    ]
+  }
+}

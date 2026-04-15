@@ -1,0 +1,22 @@
+# gluetun HTTP control server authentication config
+# Mounted at /gluetun/auth/config.toml inside the vpn container.
+#
+# Routes format: "METHOD /path" — gluetun splits on space expecting two parts.
+# Port 8000 is NOT in FIREWALL_INPUT_PORTS so it is unreachable from the host
+# or internet — only accessible from containers sharing the VPN network namespace.
+
+[[roles]]
+name = "public"
+auth = "none"
+routes = [
+  "GET /v1/vpn/status",
+  "PUT /v1/vpn/status",
+  "GET /v1/publicip/ip",
+  "GET /v1/vpn/settings",
+  "GET /v1/dns/status",
+  "PUT /v1/dns/status",
+  "GET /v1/updater/status",
+  "PUT /v1/updater/status",
+  "GET /v1/portforward",
+  "PUT /v1/portforward",
+]

@@ -1,0 +1,92 @@
+services:
+  # ── VPN gateway ────────────────────────────────────────────────────────────
+  # gluetun owns the network namespace. All webtop traffic routes through it.
+  # Kill switch is built-in: FIREWALL_INPUT_PORTS controls what can reach the
+  # desktop; everything else is dropped if the tunnel goes down.
+  vpn:
+    image: qmcgaw/gluetun
+    container_name: jumpbox-vpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-protonvpn}
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY}
+      # Mullvad requires your internal WireGuard address (e.g. 10.64.x.x/32).
+      # Leave blank for ProtonVPN.
+      - WIREGUARD_ADDRESSES=${VPN_ADDRESSES:-}
+      - SERVER_COUNTRIES=${VPN_COUNTRY:-United States}
+      # Built-in kill switch: open webtop HTTPS (3001) and webui (3002) inbound.
+      # All other inbound and outbound traffic is blocked when VPN is down.
+      - FIREWALL_INPUT_PORTS=3001,3002
+      - FIREWALL_VPN_INPUT_PORTS=
+      # DNS over TLS — prevents DNS leaks
+      - DOT=on
+      # HTTP control server — auth configured via gluetun-auth.toml (auth = none).
+      # Port 8000 is NOT in FIREWALL_INPUT_PORTS so it is unreachable from the
+      # host or internet — only accessible within this network namespace.
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000
+    ports:
+      - "0.0.0.0:4001:3001"   # webtop HTTPS — access via https://<host>:4001
+      - "0.0.0.0:4002:3002"   # gluetun webui — access via http://<host>:4002
+    volumes:
+      - gluetun-data:/gluetun
+      - ./gluetun-auth.toml:/gluetun/auth/config.toml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Linux desktop ───────────────────────────────────────────────────────────
+  # Full desktop environment in the browser. DESKTOP_ENV sets the DE:
+  #   xfce (default) | mate | kde
+  # Desktop files and settings persist in the webtop-config volume.
+  desktop:
+    image: lscr.io/linuxserver/webtop:ubuntu-${DESKTOP_ENV:-xfce}
+    container_name: jumpbox-desktop
+    network_mode: "service:vpn"
+    depends_on:
+      vpn:
+        condition: service_healthy   # won't start until VPN tunnel is confirmed
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - PASSWORD=${DESKTOP_PASSWORD}
+      - TITLE=Jumpbox
+    volumes:
+      - webtop-config:/config
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.env:/opt/vpn-browser/.env:ro
+      - ./docker-compose.yml:/opt/vpn-browser/docker-compose.yml:ro
+      - ./scripts/vpn-switch.sh:/usr/local/bin/vpn-switch:ro
+      - ./scripts/osint-setup.sh:/usr/local/bin/osint-setup:ro
+      - ./scripts/comms-setup.sh:/usr/local/bin/comms-setup:ro
+      - ./scripts/install-tools.sh:/custom-cont-init.d/01-install-tools.sh:ro
+    shm_size: "1gb"
+    restart: unless-stopped
+
+  # ── Gluetun web dashboard ──────────────────────────────────────────────────
+  # Status dashboard for the VPN. Shows exit IP, state, and start/stop control.
+  # Runs in the VPN network namespace so it can reach the gluetun API at localhost:8000.
+  # Access via http://<host>:4002
+  webui:
+    image: scuzza/gluetun-webui:latest
+    container_name: jumpbox-webui
+    network_mode: "service:vpn"
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - GLUETUN_CONTROL_URL=http://localhost:8000
+      - PORT=3002
+    restart: unless-stopped
+
+volumes:
+  gluetun-data:   # gluetun state (server lists, certs)
+  webtop-config:  # persistent desktop — files, browser history, settings
