@@ -150,13 +150,6 @@ From a terminal inside the desktop, use `vpn-switch`:
 # Check current VPN IP and tunnel state (queries gluetun API directly — instant)
 vpn-switch status
 
-# List accepted country names
-vpn-switch list
-
-# Switch to a different country
-vpn-switch Germany
-vpn-switch "United Kingdom"
-vpn-switch Switzerland
 ```
 
 **What happens when you switch:**
